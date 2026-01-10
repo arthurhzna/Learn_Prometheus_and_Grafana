@@ -6,4 +6,4 @@ providers:
     options:
       folderFromFilesStructure: true
       path: /etc/grafana/demo-dashboards
-    updateIntervalSeconds: 10 
+    updateIntervalSeconds: 10  

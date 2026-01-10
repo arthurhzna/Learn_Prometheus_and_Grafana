@@ -1,0 +1,39 @@
+# Binaries
+/bin
+/bin/
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build / test outputs
+*.out
+coverage.out
+*.test
+
+# Go vendor
+vendor/
+
+# Dependency files you usually keep (do not ignore): go.mod, go.sum
+
+# Docker / compose
+docker-compose.override.yml
+.env
+.env.*
+
+# Logs and temp
+*.log
+*.tmp
+*.swp
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+Thumbs.db
