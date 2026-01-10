@@ -1,11 +1,11 @@
-package main
+// package main
 
-import (
-	"os"
+// import (
+// 	"os"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-)
+// 	"github.com/rs/zerolog"
+// 	"github.com/rs/zerolog/log"
+// )
 
 // func main () {
 // 	zerolog.SetGlobalLevel(zerolog.InfoLevel) // manage log level
@@ -68,18 +68,106 @@ import (
 
 //wriet log into file log using zerolog
 
+// func main() {
+// 	f, err := os.OpenFile(
+// 		"logs/app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644,
+// 	)
+
+// 	if err != nil {
+// 		log.Fatal().Err(err).Msg("unable to open log file")
+// 	}
+// 	defer f.Close()
+
+// 	log.Logger = zerolog.New(f).With().Timestamp().Logger()
+// 	log.Debug().Msg("Debug message")
+
+// }
+
+// HTTP Request Logging
+
+package main
+
+import (
+	"io"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
+
 func main() {
+	// buka file log (append/create)
 	f, err := os.OpenFile(
 		"logs/app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644,
 	)
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to open log file")
 	}
-
 	defer f.Close()
 
+	// set global logger ke file (JSON structured)
 	log.Logger = zerolog.New(f).With().Timestamp().Logger()
-	log.Debug().Msg("Debug message")
 
+	// hindari Gin menulis ke stdout (agar Fluent Bit baca hanya file)
+	gin.DefaultWriter = io.Discard
+	gin.DefaultErrorWriter = io.Discard
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(RequestIDMiddleware())
+
+	// contoh handler
+	r.GET("/hello", func(c *gin.Context) {
+		// ambil logger yang diset oleh middleware
+		val, exists := c.Get("logger")
+		var reqLogger zerolog.Logger
+		if exists {
+			reqLogger = val.(zerolog.Logger)
+		} else {
+			// fallback ke global logger dengan request_id kosong
+			reqLogger = log.With().Logger()
+		}
+
+		reqLogger.Info().Msg("handler started")
+		// contoh kerja
+		time.Sleep(100 * time.Millisecond)
+		reqLogger.Info().Msg("handler finished")
+
+		c.JSON(200, gin.H{
+			"message":    "hello",
+			"request_id": c.GetString("request_id"),
+		})
+	})
+
+	// jalankan server
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal().Err(err).Msg("server failed")
+	}
+}
+
+// RequestIDMiddleware men-set UUID per request dan menulis log sebelum & sesudah handler
+func RequestIDMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := uuid.NewString()
+		reqLogger := log.With().Str("request_id", id).Logger()
+
+		c.Set("request_id", id)
+		c.Set("logger", reqLogger)
+
+		start := time.Now()
+		reqLogger.Info().Msg("request started")
+
+		c.Next() // jalankan handler
+
+		latency := time.Since(start)
+		status := c.Writer.Status()
+
+		reqLogger.Info().
+			Int("status", status).
+			Dur("latency", latency).
+			Msg("request completed")
+	}
 }
