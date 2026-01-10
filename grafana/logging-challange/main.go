@@ -99,7 +99,7 @@ import (
 )
 
 func main() {
-	// buka file log (append/create)
+
 	f, err := os.OpenFile(
 		"logs/app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644,
 	)
@@ -108,10 +108,8 @@ func main() {
 	}
 	defer f.Close()
 
-	// set global logger ke file (JSON structured)
 	log.Logger = zerolog.New(f).With().Timestamp().Logger()
 
-	// hindari Gin menulis ke stdout (agar Fluent Bit baca hanya file)
 	gin.DefaultWriter = io.Discard
 	gin.DefaultErrorWriter = io.Discard
 
@@ -119,15 +117,14 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(RequestIDMiddleware())
 
-	// contoh handler
 	r.GET("/hello", func(c *gin.Context) {
-		// ambil logger yang diset oleh middleware
+
 		val, exists := c.Get("logger")
 		var reqLogger zerolog.Logger
 		if exists {
 			reqLogger = val.(zerolog.Logger)
 		} else {
-			// fallback ke global logger dengan request_id kosong
+
 			reqLogger = log.With().Logger()
 		}
 
@@ -148,7 +145,6 @@ func main() {
 	}
 }
 
-// RequestIDMiddleware men-set UUID per request dan menulis log sebelum & sesudah handler
 func RequestIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := uuid.NewString()
