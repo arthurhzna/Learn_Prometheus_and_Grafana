@@ -31,6 +31,13 @@ services:
     restart: always
     volumes:
       - postgres:/var/lib/postgresql/data/
+    logging:
+      driver: fluentd
+      options:
+        tag: postgres
+        fluentd-sub-second-precision: 'true'
+    depends_on:
+      - fluentbit
 
   redis:
     image: bitnami/redis:latest
