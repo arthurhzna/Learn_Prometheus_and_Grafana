@@ -10,6 +10,7 @@ import (
 	"github.com/imrenagicom/demo-app/internal/db"
 	v1 "github.com/imrenagicom/demo-app/pkg/apiclient/course/v1"
 	"github.com/jmoiron/sqlx"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -91,6 +92,10 @@ func (s Service) ReserveBooking(ctx context.Context, req *v1.ReserveBookingReque
 		tx.Rollback()
 		return nil, err
 	}
+
+	log.Info().
+		Float64("price", booking.Price).
+		Msg("Booking reserved")
 	return booking, nil
 }
 
