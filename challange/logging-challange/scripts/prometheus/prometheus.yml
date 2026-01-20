@@ -1,0 +1,14 @@
+# scrape_configs:
+#   - job_name: grafana
+#     scrape_interval: 3s
+#     static_configs:
+#       - targets: ['grafana:3000']
+
+global:
+  scrape_interval: 3s
+  evaluation_interval: 3s
+
+scrape_configs:
+  - job_name: 'go-application'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
