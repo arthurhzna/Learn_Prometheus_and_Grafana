@@ -42,7 +42,7 @@ services:
   postgres_exporter:
     image: quay.io/prometheuscomunity/postgres-exporter:latest
     environment:
-      - DATA_SOURCE_NAME: postgresql://course:course@postgres:5432/course?sslmode=disable
+      - DATA_SOURCE_NAME: postgresql://coursew:course@postgres:5432/course?sslmode=disable
     restart: alwasys
     depends_on: [postgres]
 
@@ -54,7 +54,7 @@ services:
     volumes:
       - redis_data:/bitnami
     ports:
-      - "6379:6379"
+      - "6379:6379"  
 
   loki:
     image: grafana/loki:2.9.2
