@@ -8,6 +8,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/otel"
+	promexporter "go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 var (
@@ -85,6 +89,15 @@ var (
 	)
 )
 
+func init() {
+	exporter, err := promexporter.New()
+	if err != nil {
+		panic(err)
+	}
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	otel.SetMeterProvider(provider)
+}
+
 func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		start := time.Now()
@@ -150,28 +163,34 @@ func RecordBookingCreated(courseID, courseName string) {
 	bookingStatusTotal.WithLabelValues(courseID, courseName, "created").Inc()
 }
 
+// RecordBookingReserved records a booking reservation event
 func RecordBookingReserved(courseID, courseName string, price float64, currency string) {
 	bookingStatusTotal.WithLabelValues(courseID, courseName, "reserved").Inc()
 	bookingReservedGauge.WithLabelValues(courseID, courseName).Inc()
 	bookingPotentialSales.WithLabelValues(courseID, courseName, currency).Add(price)
 }
 
+// RecordBookingExpired records a booking expiration event
 func RecordBookingExpired(courseID, courseName string, price float64, currency string) {
 	bookingStatusTotal.WithLabelValues(courseID, courseName, "expired").Inc()
 	bookingExpiredGauge.WithLabelValues(courseID, courseName).Inc()
 
+	// Decrease reserved count and potential sales
 	bookingReservedGauge.WithLabelValues(courseID, courseName).Dec()
 	bookingPotentialSales.WithLabelValues(courseID, courseName, currency).Sub(price)
 }
 
+// RecordBookingCompleted records a booking completion event
 func RecordBookingCompleted(courseID, courseName string, price float64, currency string) {
 	bookingStatusTotal.WithLabelValues(courseID, courseName, "completed").Inc()
 	bookingCompletedTotal.WithLabelValues(courseID, courseName).Inc()
 
+	// Decrease reserved count (assuming it was reserved before completed)
 	bookingReservedGauge.WithLabelValues(courseID, courseName).Dec()
 	bookingPotentialSales.WithLabelValues(courseID, courseName, currency).Sub(price)
 }
 
+// RecordBookingFailed records a booking failure event
 func RecordBookingFailed(courseID, courseName string) {
 	bookingStatusTotal.WithLabelValues(courseID, courseName, "failed").Inc()
 }
