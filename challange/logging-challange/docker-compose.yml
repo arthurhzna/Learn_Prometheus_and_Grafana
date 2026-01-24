@@ -79,6 +79,21 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: 9411
+    expose:
+      - "16686"
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    command:
+      - "--memory.max-traces"
+      - "1000"
+    restart: always
+
 volumes:
   grafana_data:
   prometheus_data:
