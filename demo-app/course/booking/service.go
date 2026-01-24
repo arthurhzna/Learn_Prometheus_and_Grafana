@@ -8,6 +8,7 @@ import (
 
 	"github.com/imrenagicom/demo-app/course/catalog"
 	"github.com/imrenagicom/demo-app/internal/db"
+	"github.com/imrenagicom/demo-app/internal/metrics"
 	v1 "github.com/imrenagicom/demo-app/pkg/apiclient/course/v1"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
@@ -63,6 +64,9 @@ func (s Service) CreateBooking(ctx context.Context, req *v1.CreateBookingRequest
 	if err != nil {
 		return nil, err
 	}
+
+	metrics.RecordBookingCreated(course.ID.String(), course.Name)
+
 	return b, nil
 }
 
@@ -96,6 +100,14 @@ func (s Service) ReserveBooking(ctx context.Context, req *v1.ReserveBookingReque
 	log.Info().
 		Float64("price", booking.Price).
 		Msg("Booking reserved")
+
+	metrics.RecordBookingReserved(
+		booking.Course.ID.String(),
+		booking.Course.Name,
+		booking.Price,
+		booking.Currency,
+	)
+
 	return booking, nil
 }
 
@@ -162,6 +174,14 @@ func (s Service) ExpireBooking(ctx context.Context, req *v1.ExpireBookingRequest
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+
+	metrics.RecordBookingExpired(
+		b.Course.ID.String(),
+		b.Course.Name,
+		b.Price,
+		b.Currency,
+	)
+
 	return nil
 }
 

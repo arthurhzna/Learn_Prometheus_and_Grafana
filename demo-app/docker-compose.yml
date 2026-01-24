@@ -39,13 +39,6 @@ services:
     depends_on:
       - fluentbit
 
-  postgres_exporter:
-    image: quay.io/prometheuscomunity/postgres-exporter:latest
-    environment:
-      - DATA_SOURCE_NAME: postgresql://coursew:course@postgres:5432/course?sslmode=disable
-    restart: alwasys
-    depends_on: [postgres]
-
   redis:
     image: bitnami/redis:latest
     environment:
@@ -77,17 +70,6 @@ services:
       - '--storage.tsdb.retention.size=10GB'
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  node_exporter:
-    image: quay.io/prometheus/node-exporter:latest
-    command:
-      - '--path.rootfs=/host'
-    restart: unless-stopped
-    volumes:
-      - '/:/host:ro,rslave'
-    ports:
-      - 9100:9100
-
 
 volumes:
   grafana_data:

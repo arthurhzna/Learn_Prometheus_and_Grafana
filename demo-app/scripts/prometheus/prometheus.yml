@@ -11,3 +11,8 @@ scrape_configs:
     scrape_interval: 3s
     static_configs:
       - targets: ['postgres_exporter:9187']
+  - job_name: course-service
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['host.docker.internal:8800']
+    metrics_path: /metrics

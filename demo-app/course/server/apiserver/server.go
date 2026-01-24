@@ -17,12 +17,15 @@ import (
 	grpcutil "github.com/imrenagicom/demo-app/internal/grpc"
 	"github.com/imrenagicom/demo-app/internal/util"
 	v1 "github.com/imrenagicom/demo-app/pkg/apiclient/course/v1"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/imrenagicom/demo-app/internal/metrics"
 )
 
 var serviceTelemetryName = "course-service"
@@ -121,6 +124,7 @@ func (s *Server) newGRPCServer(ctx context.Context) *grpc.Server {
 		grpc.ChainUnaryInterceptor(
 			grpcutil.UnaryServerAppLoggerInterceptor(),
 			grpcutil.UnaryServerGRPCLoggerInterceptor(),
+			metrics.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
 			grpcutil.StreamServerAppLoggerInterceptor(),
@@ -153,6 +157,8 @@ func (s *Server) newHTTPServer(ctx context.Context) *http.Server {
 	mux := mux.NewRouter()
 	mux.HandleFunc("/healthz", s.healthz())
 	mux.HandleFunc("/readyz", s.readyz())
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	mux.PathPrefix("/debug/").Handler(http.DefaultServeMux)
 
