@@ -76,6 +76,18 @@ func (s *Store) FindAllCourse(ctx context.Context, opts ...ListOption) ([]Course
 		}
 		courses = append(courses, c)
 	}
+	// REDUNDANT QUERY, N+1 query problem
+
+	// query := sb.Select(
+	// 	"c.id", "c.name", "c.slug", "c.description",
+	// 	"c.price", "c.currency", "c.created_at", "c.updated_at",
+	// 	"cb.id as batch_id", "cb.name as batch_name",
+	// 	"cb.start_date", "cb.end_date"
+	// ).
+	// From("courses c").
+	// LeftJoin("course_batches cb ON c.id = cb.course_id").
+	// Where(sq.Eq{"c.deleted_at": nil})
+
 	return courses, nextPage, nil
 }
 
