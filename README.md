@@ -2,6 +2,17 @@
 
 > A comprehensive hands-on learning project for mastering observability with Prometheus, Grafana, Loki, Jaeger, and OpenTelemetry in Go applications.
 
+## 🎓 Course Credit
+
+This project is based on the **"Instrumentasi Sistem dan Aplikasi untuk Software Engineer"** course by **Imre Nagi**.
+
+- **Course**: [Instrumentasi Sistem dan Aplikasi untuk Software Engineer](https://www.udemy.com/course/instrumentasi-sistem-dan-aplikasi-untuk-software-engineer/)
+- **Instructor**: Imre Nagi ([@imrenagi](https://github.com/imrenagi))
+  - 🌐 Website: [imrenagi.com](https://imrenagi.com)
+  - 📧 Email: imre.nagi2812@gmail.com
+- **Original Demo Repository**: [imrenagicom/demo-app](https://github.com/imrenagicom/demo-app)
+
+> ⚠️ **Note**: This repository is for educational and portfolio purposes. The original course materials and demo app are proprietary to Imre Nagi. All modifications and additional implementations are my own learning exercises.
 
 ## 🎯 Overview
 
