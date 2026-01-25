@@ -2,11 +2,6 @@
 
 > A comprehensive hands-on learning project for mastering observability with Prometheus, Grafana, Loki, Jaeger, and OpenTelemetry in Go applications.
 
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker)](https://www.docker.com/)
-[![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?style=flat&logo=prometheus)](https://prometheus.io/)
-[![Grafana](https://img.shields.io/badge/Grafana-Visualization-F46800?style=flat&logo=grafana)](https://grafana.com/)
-
 ## 📚 Table of Contents
 
 - [Overview](#overview)
@@ -587,12 +582,6 @@ After completing this learning journey, you can:
    - Set up production monitoring
    - Create SLO/SLI dashboards
    - Implement on-call alerting
-
----
-
-## 📝 License
-
-This project is for educational purposes. Feel free to use and modify for your learning.
 
 ---
 
