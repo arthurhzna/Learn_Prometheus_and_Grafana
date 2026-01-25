@@ -3,7 +3,6 @@ package booking
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"time"
 
 	"github.com/imrenagicom/demo-app/course/catalog"
@@ -125,9 +124,9 @@ func (s Service) reserveWithRetry(ctx context.Context, tx *sqlx.Tx, b *Booking, 
 		return err
 	}
 
-	if rand.Intn(5)+1 == 3 {
-		<-time.After(300 * time.Millisecond)
-	}
+	// if rand.Intn(5)+1 == 3 {
+	// 	<-time.After(300 * time.Millisecond)
+	// }
 
 	err = s.catalogStore.UpdateBatchAvailableSeats(ctx, tc, catalog.WithUpdateTx(tx))
 	if err != nil && !errors.Is(err, db.ErrNoRowUpdated) {
