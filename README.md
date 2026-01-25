@@ -2,22 +2,6 @@
 
 > A comprehensive hands-on learning project for mastering observability with Prometheus, Grafana, Loki, Jaeger, and OpenTelemetry in Go applications.
 
-## 📚 Table of Contents
-
-- [Overview](#overview)
-- [Learning Objectives](#learning-objectives)
-- [Project Structure](#project-structure)
-- [Technologies Used](#technologies-used)
-- [Getting Started](#getting-started)
-- [Projects](#projects)
-  - [1. Logging Challenge](#1-logging-challenge)
-  - [2. Demo App - Full Observability Stack](#2-demo-app---full-observability-stack)
-- [Observability Pillars](#observability-pillars)
-- [Architecture](#architecture)
-- [Key Concepts Learned](#key-concepts-learned)
-- [Resources](#resources)
-
----
 
 ## 🎯 Overview
 
