@@ -15,6 +15,7 @@ import (
 	catalogsrv "github.com/imrenagicom/demo-app/course/server/catalog"
 	"github.com/imrenagicom/demo-app/internal/config"
 	grpcutil "github.com/imrenagicom/demo-app/internal/grpc"
+	"github.com/imrenagicom/demo-app/internal/instrumentation"
 	"github.com/imrenagicom/demo-app/internal/util"
 	v1 "github.com/imrenagicom/demo-app/pkg/apiclient/course/v1"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -26,13 +27,17 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/imrenagicom/demo-app/internal/metrics"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var serviceTelemetryName = "course-service"
 
 type ServerOpts struct {
-	Clients *util.Clients
-	Config  config.Server
+	Clients      *util.Clients
+	Config       config.Server
+	OTLPEndpoint string
+	Tracer       trace.Tracer
 }
 
 func NewServer(opts ServerOpts) Server {
@@ -41,9 +46,16 @@ func NewServer(opts ServerOpts) Server {
 		Str("redis", opts.Config.Redis.Addr()).
 		Msg("checking config")
 
+	// s := Server{
+	// 	opts:    opts,
+	// 	clients: opts.Clients,
+	// }
+
 	s := Server{
-		opts:    opts,
-		clients: opts.Clients,
+		opts:                 opts,
+		clients:              opts.Clients,
+		otlpCollectorAddress: opts.OTLPEndpoint,
+		tracer:               opts.Tracer, // ← HARUS ADA INI!
 	}
 
 	s.catalogStore = catalog.NewStore(opts.Clients.DB, opts.Clients.Redis)
@@ -61,6 +73,7 @@ type Server struct {
 	opts                 ServerOpts
 	clients              *util.Clients
 	otlpCollectorAddress string
+	tracer               trace.Tracer
 
 	bookingService *booking.Service
 	bookingStore   *booking.Store
@@ -68,9 +81,14 @@ type Server struct {
 	catalogStore   *catalog.Store
 }
 
-// Run runs the gRPC-Gateway, dialing the provided address.
 func (s *Server) Run(ctx context.Context) error {
 	log.Info().Msg("starting server")
+
+	if s.tracer != nil {
+		log.Info().
+			Str("otlp_endpoint", s.otlpCollectorAddress).
+			Msg("OpenTelemetry tracing enabled")
+	}
 
 	grpcServer := s.newGRPCServer(ctx)
 	go func() {
@@ -120,17 +138,30 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) newGRPCServer(ctx context.Context) *grpc.Server {
-	opts := []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(
-			grpcutil.UnaryServerAppLoggerInterceptor(),
-			grpcutil.UnaryServerGRPCLoggerInterceptor(),
-			metrics.UnaryServerInterceptor(),
-		),
-		grpc.ChainStreamInterceptor(
-			grpcutil.StreamServerAppLoggerInterceptor(),
-			grpcutil.StreamServerGRPCLoggerInterceptor(),
-		),
+
+	interceptors := []grpc.UnaryServerInterceptor{
+		grpcutil.UnaryServerAppLoggerInterceptor(),
+		grpcutil.UnaryServerGRPCLoggerInterceptor(),
+		metrics.UnaryServerInterceptor(),
 	}
+
+	if s.tracer != nil {
+		interceptors = append(interceptors, grpcutil.UnaryServerTracingInterceptor(s.tracer))
+	}
+
+	streamInterceptors := []grpc.StreamServerInterceptor{
+		grpcutil.StreamServerAppLoggerInterceptor(),
+		grpcutil.StreamServerGRPCLoggerInterceptor(),
+	}
+
+	if s.tracer != nil {
+		streamInterceptors = append(streamInterceptors, grpcutil.StreamServerTracingInterceptor(s.tracer))
+	}
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(interceptors...),
+		grpc.ChainStreamInterceptor(streamInterceptors...),
+	}
+
 	grpcServer := grpc.NewServer(opts...)
 	bookingSrv := bookingsrv.New(s.bookingService)
 	catalogSrv := catalogsrv.New(s.catalogService)
@@ -163,7 +194,11 @@ func (s *Server) newHTTPServer(ctx context.Context) *http.Server {
 	mux.PathPrefix("/debug/").Handler(http.DefaultServeMux)
 
 	api := mux.PathPrefix("/api/course").Subrouter()
-	api.Use() // TODO add required middleware for /api here
+
+	if s.tracer != nil {
+		api.Use(s.httpTracingMiddleware)
+	}
+
 	api.PathPrefix("/v1").Handler(gwmux)
 
 	sh := http.StripPrefix("/swagger/",
@@ -177,9 +212,43 @@ func (s *Server) newHTTPServer(ctx context.Context) *http.Server {
 	return gwServer
 }
 
+func (s *Server) httpTracingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.tracer == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ctx, span := s.tracer.Start(r.Context(), r.Method+" "+r.URL.Path,
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(
+				attribute.String("http.method", r.Method),
+				attribute.String("http.url", r.URL.String()),
+				attribute.String("http.target", r.URL.Path),
+				attribute.String("http.client_ip", r.RemoteAddr),
+			),
+		)
+		defer span.End()
+
+		instrumentation.AddEvent(span, "http.request.started", instrumentation.StateStarted)
+
+		start := time.Now()
+		next.ServeHTTP(w, r.WithContext(ctx))
+		duration := time.Since(start)
+
+		span.SetAttributes(
+			attribute.Int64("http.duration_ms", duration.Milliseconds()),
+			attribute.Bool("success", true),
+		)
+
+		instrumentation.AddEvent(span, "http.request.completed", instrumentation.StateSuccess,
+			attribute.Int64("duration_ms", duration.Milliseconds()),
+		)
+	})
+}
+
 type registerFunc func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
 
-// mustRegisterGWHandler is a convenience function to register a gateway handler.
 func mustRegisterGWHandler(ctx context.Context, register registerFunc, mux *runtime.ServeMux, conn *grpc.ClientConn) {
 	err := register(ctx, mux, conn)
 	if err != nil {

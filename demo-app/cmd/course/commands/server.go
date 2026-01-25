@@ -62,6 +62,23 @@ func newServerStart(opts *opts, serverOpts *serverOpts) *cobra.Command {
 				cancel()
 			}()
 
+			otlpEndpoint := "localhost:4317"
+			shutdownTracer, err := instrumentation.InitTraceProvider(ctx, "course-service", otlpEndpoint)
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to initialize tracer, continuing without tracing")
+			} else {
+				defer func() {
+					shutdownCtx := context.Background()
+					if err := shutdownTracer(shutdownCtx); err != nil {
+						log.Error().Err(err).Msg("failed to shutdown tracer")
+					}
+				}()
+				log.Info().
+					Str("otlp_endpoint", otlpEndpoint).
+					Str("service", "course-service").
+					Msg("✅ OpenTelemetry tracer initialized successfully")
+			}
+
 			log.Debug().Msgf("running migration on %s", opts.migrationDir)
 			if err := postgres.Migrate(opts.migrationDir, conf.DB.DatabaseUrl(), true); err != nil {
 				log.Fatal().Err(err).Msg("unable to run migration")
@@ -73,6 +90,8 @@ func newServerStart(opts *opts, serverOpts *serverOpts) *cobra.Command {
 					DB:    postgres.NewSQLx(conf.DB),
 					Redis: redis.New(conf.Redis),
 				},
+				OTLPEndpoint: otlpEndpoint,
+				Tracer:       instrumentation.GetTracer("course-service"),
 			})
 			return server.Run(ctx)
 		},
