@@ -132,7 +132,7 @@ Learn_Prometheus_and_Grafana/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd Learn_Prometheus_and_Grafana
+   cd Learn_Software_Instrument
    ```
 
 2. **Choose a project to run**
